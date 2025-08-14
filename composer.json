@@ -1,0 +1,43 @@
+{
+    "name": "nzh-c/ithenticate",
+    "description": "A library to use Ithenticate API easier and faster, to check and prevent plagiarism",
+    "type": "library",
+    "license": "MIT",
+    "extra": {
+        "think": {
+            "services": [
+                "nzh-c\\ithenticate\\Service"
+            ],
+            "config": {
+                "ithenticate": "config/xmlrpc.php"
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "NzhC\\Ithenticate\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Ning",
+            "email": "ningzehong@live.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "ext-xmlrpc": "*",
+        "ext-curl": "*",
+        "topthink/framework": "^6.0.0",
+        "ext-json": "*",
+        "ext-simplexml": "*",
+        "ext-dom": "*",
+        "ext-zip": "*"
+    },
+    "repositories": {
+        "packagist": {
+            "type": "composer",
+            "url": "https://repo.packagist.org"
+        }
+    }
+}
