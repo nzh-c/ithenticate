@@ -166,7 +166,7 @@ class Service
             {
                 if (($responseData['status'] ?? null) === IthenticateEnum::UNAUTHENTICATED)
                 {
-                    throw new IthenticateAuthException($responseData['messages'] ?? IthenticateEnum::FAILED_AUTH ,$responseData['status'] ?? IthenticateEnum::REQUEST_ERROR);
+                    throw new IthenticateAuthException(json_encode($responseData['messages']) ?? IthenticateEnum::FAILED_AUTH ,$responseData['status'] ?? IthenticateEnum::REQUEST_ERROR);
                 }else{
                     throw new IthenticateRuntimeException(json_encode($responseData) ?? IthenticateEnum::SYSTEM_ERROR
                         ,$responseData['status'] ?? IthenticateEnum::REQUEST_ERROR,
