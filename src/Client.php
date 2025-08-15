@@ -87,17 +87,25 @@ class Client
      */
     public function getReportByDocumentID(int $documentID):array
     {
-        $this->service->setIthenticateMethod(IthenticateEnum::METHOD_DOCUMENT_GET);
+        try {
+            $this->service->setIthenticateMethod(IthenticateEnum::METHOD_DOCUMENT_GET);
 
-        $params = [
-            'sid' => $this->getSid(),
-            'id' => $documentID
-        ];
+            $params = [
+                'sid' => $this->getSid(),
+                'id' => $documentID
+            ];
 
-        $this->service->setParams($params);
-        $result = $this->service->curlXmlRpc();
+            $this->service->setParams($params);
+            $result = $this->service->curlXmlRpc();
 
-        return $result['documents'] ?? [];
+            return $result['documents'] ?? [];
+        }catch (IthenticateAuthException $e){
+            $this->refreshToken();
+            $this->getReportByDocumentID($documentID);
+        }catch (\Exception $e)
+        {
+            throw $e;
+        }
     }
 
 
