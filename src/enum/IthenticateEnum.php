@@ -48,4 +48,6 @@ class IthenticateEnum
     const FILE_SIZE_MAX_100 = 'The file size cannot exceed 100M.';
 
     const FILE_FORMAT_NOT_SUPPORTED = 'The uploaded file format is not supported.';
+
+    const FAILED_AUTH = 'Failed to provide authenticated sid';
 }
