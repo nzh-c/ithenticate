@@ -193,6 +193,12 @@ class Client
 
             $result = $this->service->curlXmlRpc();
             $this->sid = $result["sid"] ?? "";
+
+            if(empty($this->sid))
+            {
+                throw new IthenticateHttpException(IthenticateEnum::FAILED_AUTH);
+            }
+
             Cache::set($this->sidKey,$this->sid);
         }
 
@@ -263,23 +269,31 @@ class Client
      */
     private function folderGroupCreate():?int
     {
-        $groupId = $this->getFolderGroupByName($this->serviceConfig['group_name']);
-        if (empty($groupId))
+        try {
+            $groupId = $this->getFolderGroupByName($this->serviceConfig['group_name']);
+            if (empty($groupId))
+            {
+                $this->service->setIthenticateMethod(IthenticateEnum::METHOD_GROUP_ADD);
+
+                $params = [
+                    'sid' => $this->getSid(),
+                    'name' => $this->serviceConfig['group_name']
+                ];
+
+                $this->service->setParams($params);
+
+                $result = $this->service->curlXmlRpc();
+                $groupId = $result['id'] ?? null;
+            }
+
+            return $groupId;
+        }catch (IthenticateAuthException $e){
+            $this->refreshToken();
+            $this->folderGroupCreate();
+        }catch (\Exception $e)
         {
-            $this->service->setIthenticateMethod(IthenticateEnum::METHOD_GROUP_ADD);
-
-            $params = [
-                'sid' => $this->getSid(),
-                'name' => $this->serviceConfig['group_name']
-            ];
-
-            $this->service->setParams($params);
-
-            $result = $this->service->curlXmlRpc();
-            $groupId = $result['id'] ?? null;
+            throw $e;
         }
-
-        return $groupId;
     }
 
     /**
@@ -292,18 +306,26 @@ class Client
      */
     private function getFolderByName(string $folderName):?int
     {
-        $this->service->setIthenticateMethod(IthenticateEnum::METHOD_FOLDER_LIST);
+        try {
+            $this->service->setIthenticateMethod(IthenticateEnum::METHOD_FOLDER_LIST);
 
-        $params = [
-            'sid' => $this->getSid(),
-        ];
+            $params = [
+                'sid' => $this->getSid(),
+            ];
 
-        $this->service->setParams($params);
-        $result = $this->service->curlXmlRpc();
+            $this->service->setParams($params);
+            $result = $this->service->curlXmlRpc();
 
-        $foldersList = $result["folders"] ?? [];
+            $foldersList = $result["folders"] ?? [];
 
-        return $this->service->getDataId($foldersList,$folderName);
+            return $this->service->getDataId($foldersList,$folderName);
+        }catch (IthenticateAuthException $e){
+            $this->refreshToken();
+            $this->getFolderByName($folderName);
+        }catch (\Exception $e)
+        {
+            throw $e;
+        }
     }
 
     /**
@@ -316,17 +338,27 @@ class Client
      */
     private function getFolderGroupByName(string $groupName):?int
     {
-        $this->service->setIthenticateMethod(IthenticateEnum::METHOD_GROUP_LIST);
+        try {
 
-        $params = [
-            'sid' => $this->getSid(),
-        ];
+            $this->service->setIthenticateMethod(IthenticateEnum::METHOD_GROUP_LIST);
 
-        $this->service->setParams($params);
-        $result = $this->service->curlXmlRpc();
+            $params = [
+                'sid' => $this->getSid(),
+            ];
 
-        $groupList = $result["groups"] ?? [];
+            $this->service->setParams($params);
+            $result = $this->service->curlXmlRpc();
 
-        return $this->service->getDataId($groupList,$groupName);
+            $groupList = $result["groups"] ?? [];
+
+            return $this->service->getDataId($groupList,$groupName);
+        }catch (IthenticateAuthException $e){
+            $this->refreshToken();
+            $this->getFolderGroupByName($groupName);
+        }catch (\Exception $e)
+        {
+            throw $e;
+        }
+
     }
 }
