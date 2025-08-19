@@ -87,7 +87,7 @@ class Client
      */
     public function getReportByDocumentID(int $documentID):array
     {
-        try {
+        return $this->executeWithRetry(function () use($documentID){
             $this->service->setIthenticateMethod(IthenticateEnum::METHOD_DOCUMENT_GET);
 
             $params = [
@@ -99,13 +99,7 @@ class Client
             $result = $this->service->curlXmlRpc();
 
             return $result['documents'] ?? [];
-        }catch (IthenticateAuthException $e){
-            $this->refreshToken();
-            $this->getReportByDocumentID($documentID);
-        }catch (\Exception $e)
-        {
-            throw $e;
-        }
+        });
     }
 
 
@@ -130,8 +124,8 @@ class Client
                                     string $authorFirstname = '',
                                     string $authorLastname = ''):array
     {
-        try {
 
+        return $this->executeWithRetry(function () use($documentContentPath, $folderNumber,$filename, $title, $authorFirstname, $authorLastname){
             $this->service->setIthenticateMethod(IthenticateEnum::METHOD_DOCUMENT_ADD);
 
             $documentContent = $this->service->getDocumentContent($documentContentPath);
@@ -162,13 +156,7 @@ class Client
             $documentData = $result['uploaded'] ?? [];
 
             return $documentData[0] ?? [];
-        }catch (IthenticateAuthException $e){
-            $this->refreshToken();
-            $this->submitDocument($documentContentPath, $folderNumber,$filename, $title, $authorFirstname, $authorLastname);
-        }catch (\Exception $e)
-        {
-            throw $e;
-        }
+        });
     }
 
     /**
@@ -191,8 +179,14 @@ class Client
             ];
             $this->service->setParams($params);
 
-            $result = $this->service->curlXmlRpc();
-            $this->sid = $result["sid"] ?? "";
+            try {
+                $result = $this->service->curlXmlRpc();
+                $this->sid = $result["sid"] ?? "";
+            }catch (\Exception $e)
+            {
+                throw $e;
+            }
+
 
             if(empty($this->sid))
             {
@@ -226,9 +220,9 @@ class Client
      * @throws exception\IthenticateCurlException
      * @author n
      */
-    public function folderAdd(string $folderName,string $description = '')
+    public function folderAdd(string $folderName,string $description = ''):?int
     {
-        try {
+        return $this->executeWithRetry(function () use($folderName,$description){
             $groupId = $this->folderGroupCreate();
             $folderId = $this->getFolderByName($folderName);
             if (empty($folderId))
@@ -250,13 +244,7 @@ class Client
             }
 
             return $folderId;
-        }catch (IthenticateAuthException $e){
-            $this->refreshToken();
-            $this->folderAdd($folderName,$description);
-        }catch (\Exception $e)
-        {
-            throw $e;
-        }
+        });
 
     }
 
@@ -269,7 +257,7 @@ class Client
      */
     private function folderGroupCreate():?int
     {
-        try {
+        return $this->executeWithRetry(function (){
             $groupId = $this->getFolderGroupByName($this->serviceConfig['group_name']);
             if (empty($groupId))
             {
@@ -287,13 +275,7 @@ class Client
             }
 
             return $groupId;
-        }catch (IthenticateAuthException $e){
-            $this->refreshToken();
-            $this->folderGroupCreate();
-        }catch (\Exception $e)
-        {
-            throw $e;
-        }
+        });
     }
 
     /**
@@ -306,7 +288,7 @@ class Client
      */
     private function getFolderByName(string $folderName):?int
     {
-        try {
+        return $this->executeWithRetry(function () use ($folderName){
             $this->service->setIthenticateMethod(IthenticateEnum::METHOD_FOLDER_LIST);
 
             $params = [
@@ -319,13 +301,7 @@ class Client
             $foldersList = $result["folders"] ?? [];
 
             return $this->service->getDataId($foldersList,$folderName);
-        }catch (IthenticateAuthException $e){
-            $this->refreshToken();
-            $this->getFolderByName($folderName);
-        }catch (\Exception $e)
-        {
-            throw $e;
-        }
+        });
     }
 
     /**
@@ -338,8 +314,7 @@ class Client
      */
     private function getFolderGroupByName(string $groupName):?int
     {
-        try {
-
+        return $this->executeWithRetry(function () use ($groupName){
             $this->service->setIthenticateMethod(IthenticateEnum::METHOD_GROUP_LIST);
 
             $params = [
@@ -352,13 +327,33 @@ class Client
             $groupList = $result["groups"] ?? [];
 
             return $this->service->getDataId($groupList,$groupName);
-        }catch (IthenticateAuthException $e){
+        });
+
+    }
+
+    /**
+     * @notes executeWithRetry
+     * @param callable $callback
+     * @param int $retry
+     * @return mixed
+     * @throws IthenticateHttpException
+     * @throws exception\IthenticateCurlException
+     * @author n
+     * @date 2025/8/19
+     */
+    private function executeWithRetry(callable $callback, int $retry = 0)
+    {
+        try {
+            return $callback();
+        } catch (IthenticateAuthException $e) {
+            if ($retry >= 1) {
+                throw $e;
+            }
             $this->refreshToken();
-            $this->getFolderGroupByName($groupName);
-        }catch (\Exception $e)
+            return $this->executeWithRetry($callback, $retry + 1);
+        } catch (\Exception $e)
         {
             throw $e;
         }
-
     }
 }
